@@ -1,0 +1,7 @@
+{
+  "best_model": "random_forest",
+  "best_accuracy": 0.9956625785222853,
+  "num_train_samples": 113658,
+  "num_val_samples": 20058,
+  "source_landmarks_csv": "D:\\Documents\\School\\College\\2025-2026\\ECE460J\\ECE460J-Final-Project\\final-submission\\landmarks.csv"
+}

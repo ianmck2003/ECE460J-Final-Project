@@ -1,0 +1,7 @@
+{
+  "copied_model_to": "D:\\Documents\\School\\College\\2025-2026\\ECE460J\\ECE460J-Final-Project\\final-submission\\model.pkl",
+  "copied_encoder_to": "D:\\Documents\\School\\College\\2025-2026\\ECE460J\\ECE460J-Final-Project\\final-submission\\label_encoder.pkl",
+  "source_model": "D:\\Documents\\School\\College\\2025-2026\\ECE460J\\ECE460J-Final-Project\\analysis\\reports\\model_comparison\\best_model.pkl",
+  "source_encoder": "D:\\Documents\\School\\College\\2025-2026\\ECE460J\\ECE460J-Final-Project\\analysis\\reports\\model_comparison\\label_encoder.pkl",
+  "summary_exists": true
+}

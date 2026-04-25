@@ -1,0 +1,12 @@
+{
+  "classifier_only": {
+    "ms_per_sample_mean": 0.01940563939604082,
+    "ms_per_sample_std": 0.0011302073505779183
+  },
+  "end_to_end": {
+    "status": "ok",
+    "samples_used": 183,
+    "ms_per_frame_mean": 86.93679126521542,
+    "ms_per_frame_std": 5.186892396559548
+  }
+}
