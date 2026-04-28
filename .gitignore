@@ -1,13 +1,53 @@
 ./env
+./.env
 ./venv
 ./__pycache__
-./__pycache__/*
-./__pycache__/**/*
-./__pycache__/**/**/*
-./__pycache__/**/**/**/*
-./__pycache__/**/**/**/**/*
-./__pycache__/**/**/**/**/**/*
-./__pycache__/**/**/**/**/**/**/*
-./__pycache__/**/**/**/**/**/**/**/*
-./__pycache__/**/**/**/**/**/**/**/**/*
-./__pycache__/**/**/**/**/**/**/**/**/**/*
+
+./asl_data/
+./final-submission/asl_data/
+
+# Large/local datasets and generated data
+./data/
+./datasets/
+./dataset/
+./raw_data/
+./kaggle-test-images/
+
+# Analysis outputs (can be regenerated)
+./analysis/plots/outputs/
+./analysis/reports/model_comparison/best_model.pkl
+./analysis/reports/model_comparison/label_encoder.pkl
+
+# Model artifacts and large binaries
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+*.tflite
+
+# Media and recording dumps
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# Additional large artifacts and archives
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.bz2
+*.xz
+*.npz
+*.npy
+*.parquet
+*.feather
+*.bin
+*.ckpt
+*.pb
+*.onnx.data
+*.pkl
