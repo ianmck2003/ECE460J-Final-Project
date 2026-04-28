@@ -19,7 +19,6 @@ import pickle
 import collections
 import cv2
 import mediapipe as mp
-import numpy as np
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
@@ -34,6 +33,28 @@ CAPTION_HEIGHT      = 60   # pixels
 CAPTION_FONT_SCALE  = 1.2
 CAPTION_COLOR       = (255, 255, 255)
 CAPTION_BG          = (30, 30, 30)
+
+# Hand overlay (BGR) — skeleton + knuckle emphasis (MediaPipe 21-landmark topology)
+HAND_SKELETON_COLOR = (0, 220, 180)
+HAND_SKELETON_THICK = 2
+HAND_WRIST_COLOR    = (80, 80, 255)
+HAND_KNUCKLE_COLOR  = (60, 200, 255)
+HAND_TIP_COLOR      = (180, 255, 120)
+HAND_KNUCKLE_RADIUS = 7
+HAND_TIP_RADIUS     = 4
+HAND_WRIST_RADIUS   = 8
+
+# Bone graph matches MediaPipe Hands (same indices as Hand Landmarker task).
+_HAND_BONES = (
+    (0, 1), (1, 2), (2, 3), (3, 4),
+    (0, 5), (5, 6), (6, 7), (7, 8),
+    (0, 9), (9, 10), (10, 11), (11, 12),
+    (0, 13), (13, 14), (14, 15), (15, 16),
+    (0, 17), (17, 18), (18, 19), (19, 20),
+    (5, 9), (9, 13), (13, 17),
+)
+# Fingertips vs interior joints (what we emphasize as "knuckles" + thumb joints).
+_TIP_IDX = frozenset({4, 8, 12, 16, 20})
 
 
 def load_model(path):
@@ -103,6 +124,33 @@ def draw_prediction_overlay(frame, prediction, stable_count):
                 cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 120), 2, cv2.LINE_AA)
     cv2.rectangle(frame, (10, 55), (210, 70), (60, 60, 60), -1)
     cv2.rectangle(frame, (10, 55), (10 + bar_w, 70), (0, 255, 120), -1)
+
+
+def draw_hand_overlay(frame, landmarks):
+    """Draw virtual skeleton and joint positions from Hand Landmarker output."""
+    h, w = frame.shape[:2]
+
+    pts = []
+    for lm in landmarks:
+        px = int(lm.x * w)
+        py = int(lm.y * h)
+        pts.append((px, py))
+
+    for a, b in _HAND_BONES:
+        cv2.line(
+            frame, pts[a], pts[b],
+            HAND_SKELETON_COLOR, HAND_SKELETON_THICK, cv2.LINE_AA,
+        )
+
+    for i, (px, py) in enumerate(pts):
+        if i == 0:
+            color, radius = HAND_WRIST_COLOR, HAND_WRIST_RADIUS
+        elif i in _TIP_IDX:
+            color, radius = HAND_TIP_COLOR, HAND_TIP_RADIUS
+        else:
+            color, radius = HAND_KNUCKLE_COLOR, HAND_KNUCKLE_RADIUS
+        cv2.circle(frame, (px, py), radius, color, -1, cv2.LINE_AA)
+        cv2.circle(frame, (px, py), radius, (40, 40, 40), 1, cv2.LINE_AA)
 
 
 def main():
@@ -180,6 +228,8 @@ def main():
                     stable_count = 0
 
         # --- Draw ---
+        if result.hand_landmarks:
+            draw_hand_overlay(frame, result.hand_landmarks[0])
         draw_prediction_overlay(frame, smoothed if smoothed not in ("nothing",) else None, stable_count)
         draw_caption(frame, caption)
         cv2.imshow("ASL Fingerspelling", frame)
