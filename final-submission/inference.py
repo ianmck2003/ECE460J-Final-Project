@@ -25,7 +25,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
 # --- Tunable UX parameters ---
-CONFIRM_FRAMES = 20   # frames a sign must be held before committing — lower = faster, higher = more deliberate
+CONFIRM_FRAMES = 40   # frames a sign must be held before committing — lower = faster, higher = more deliberate
 SMOOTH_WINDOW  = 7    # rolling window size for prediction smoothing
 
 MODEL_PATH          = "./model.pkl"
