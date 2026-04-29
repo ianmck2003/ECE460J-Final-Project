@@ -11,10 +11,13 @@ Images that MediaPipe can't detect a hand in are skipped.
 
 import csv
 import os
+
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+
+from landmark_features import base_vector_from_mediapipe
 
 DATA_DIR = "./asl_data/asl_alphabet_train/asl_alphabet_train"
 OUTPUT_CSV = "./landmarks.csv"
@@ -69,16 +72,7 @@ with open(OUTPUT_CSV, "w", newline="") as f:
                 continue
 
             lm = result.hand_landmarks[0]
-
-            # Normalize: subtract wrist position so hand location in frame doesn't matter
-            wrist_x, wrist_y, wrist_z = lm[0].x, lm[0].y, lm[0].z
-            coords = []
-            for point in lm:
-                coords += [point.x - wrist_x, point.y - wrist_y, point.z - wrist_z]
-
-            # Scale so max absolute value = 1 (makes hand size invariant)
-            max_val = max(abs(v) for v in coords) or 1.0
-            coords = [v / max_val for v in coords]
+            coords = base_vector_from_mediapipe(lm)
 
             writer.writerow([label] + coords)
             written += 1

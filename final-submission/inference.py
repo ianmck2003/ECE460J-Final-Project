@@ -19,11 +19,13 @@ import pickle
 import collections
 import cv2
 import mediapipe as mp
+
+from landmark_features import base_vector_from_mediapipe, expand_features
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
 # --- Tunable UX parameters ---
-CONFIRM_FRAMES = 60   # frames a sign must be held before committing — lower = faster, higher = more deliberate
+CONFIRM_FRAMES = 20   # frames a sign must be held before committing — lower = faster, higher = more deliberate
 SMOOTH_WINDOW  = 7    # rolling window size for prediction smoothing
 
 MODEL_PATH          = "./model.pkl"
@@ -79,18 +81,13 @@ def init_landmarker(path):
 
 
 def extract_landmarks(result):
-    """Return normalized 63-length feature vector, or None if no hand detected."""
+    """Return model feature vector (63 base + geometry extras), or None if no hand."""
     if not result.hand_landmarks:
         return None
 
     lm = result.hand_landmarks[0]
-    wrist_x, wrist_y, wrist_z = lm[0].x, lm[0].y, lm[0].z
-    coords = []
-    for point in lm:
-        coords += [point.x - wrist_x, point.y - wrist_y, point.z - wrist_z]
-
-    max_val = max(abs(v) for v in coords) or 1.0
-    return [v / max_val for v in coords]
+    base = base_vector_from_mediapipe(lm)
+    return expand_features(base).tolist()
 
 
 def draw_caption(frame, text):
