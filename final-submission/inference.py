@@ -1,19 +1,6 @@
-"""
-Real-time ASL fingerspelling inference with caption display.
-
-Controls:
-  Backspace  — delete last character
-  C          — clear all text
-  Q / Esc    — quit
-
-UX logic:
-  - Prediction is smoothed over a rolling window of frames
-  - A letter is committed only after being the stable prediction for CONFIRM_FRAMES
-  - After committing, a cooldown prevents the same letter re-committing immediately
-    (you must briefly show "nothing" or a different letter to repeat)
-  - Holding the "space" sign for CONFIRM_FRAMES inserts a space
-  - "nothing" (no recognizable sign) does nothing
-"""
+# realtime ASL fingerspelling inference. Predictions are smoothed over a rolling window
+# A letter is only committed once held steady for CONFIRM_FRAMES frames.
+# Controls: Backspace to delete, C to clear, Q or Esc to quit.
 
 import pickle
 import collections
@@ -24,7 +11,7 @@ from landmark_features import base_vector_from_mediapipe, expand_features
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
-# --- Tunable UX parameters ---
+# ================ Tunable UX parameters ================
 CONFIRM_FRAMES = 40   # frames a sign must be held before committing — lower = faster, higher = more deliberate
 SMOOTH_WINDOW  = 7    # rolling window size for prediction smoothing
 
@@ -36,7 +23,7 @@ CAPTION_FONT_SCALE  = 1.2
 CAPTION_COLOR       = (255, 255, 255)
 CAPTION_BG          = (30, 30, 30)
 
-# Hand overlay (BGR) — skeleton + knuckle emphasis (MediaPipe 21-landmark topology)
+# Hand overlay — skeleton + knuckle emphasis
 HAND_SKELETON_COLOR = (0, 220, 180)
 HAND_SKELETON_THICK = 2
 HAND_WRIST_COLOR    = (80, 80, 255)
@@ -46,7 +33,7 @@ HAND_KNUCKLE_RADIUS = 7
 HAND_TIP_RADIUS     = 4
 HAND_WRIST_RADIUS   = 8
 
-# Bone graph matches MediaPipe Hands (same indices as Hand Landmarker task).
+# Bone graph matches MediaPipe Hands
 _HAND_BONES = (
     (0, 1), (1, 2), (2, 3), (3, 4),
     (0, 5), (5, 6), (6, 7), (7, 8),
@@ -55,7 +42,7 @@ _HAND_BONES = (
     (0, 17), (17, 18), (18, 19), (19, 20),
     (5, 9), (9, 13), (13, 17),
 )
-# Fingertips vs interior joints (what we emphasize as "knuckles" + thumb joints).
+# Fingertips vs interior joints
 _TIP_IDX = frozenset({4, 8, 12, 16, 20})
 
 
@@ -81,7 +68,7 @@ def init_landmarker(path):
 
 
 def extract_landmarks(result):
-    """Return model feature vector (63 base + geometry extras), or None if no hand."""
+    # Returns the model feature vector, or None if no hand was detected
     if not result.hand_landmarks:
         return None
 
@@ -91,7 +78,7 @@ def extract_landmarks(result):
 
 
 def draw_caption(frame, text):
-    """Draw a caption bar at the bottom of the frame."""
+    # Draws a caption bar at the bottom of the frame
     h, w = frame.shape[:2]
     bar_y = h - CAPTION_HEIGHT
     cv2.rectangle(frame, (0, bar_y), (w, h), CAPTION_BG, -1)
@@ -110,7 +97,7 @@ def draw_caption(frame, text):
 
 
 def draw_prediction_overlay(frame, prediction, stable_count):
-    """Show current (uncommitted) prediction and a fill bar indicating commit progress."""
+    # Shows the current prediction and a progress bar indicating how close it is to being committed.
     if prediction is None or prediction == "nothing":
         return
 
@@ -124,7 +111,7 @@ def draw_prediction_overlay(frame, prediction, stable_count):
 
 
 def draw_hand_overlay(frame, landmarks):
-    """Draw virtual skeleton and joint positions from Hand Landmarker output."""
+    # Draws the hand skeleton and joint dots on the frame.
     h, w = frame.shape[:2]
 
     pts = []
@@ -192,18 +179,18 @@ def main():
         # Smooth: take most common prediction in rolling window
         smoothed = collections.Counter(recent_preds).most_common(1)[0][0]
 
-        # --- Cooldown countdown ---
+        # ================ Cooldown countdown ================
         if in_cooldown:
             cooldown_count -= 1
             if cooldown_count <= 0:
                 in_cooldown = False
 
-        # --- "nothing" resets tracking but does nothing else ---
+        # ================ "nothing" resets tracking but does nothing else ================
         if smoothed == "nothing":
             stable_count = 0
             last_stable = None
 
-        # --- All actionable signs (letters + space) ---
+        # ================ All actionable signs (letters + space) ================
         else:
             if smoothed == last_stable:
                 stable_count += 1
@@ -224,7 +211,7 @@ def main():
                     cooldown_count = CONFIRM_FRAMES
                     stable_count = 0
 
-        # --- Draw ---
+        # ================ Draw ================
         if result.hand_landmarks:
             draw_hand_overlay(frame, result.hand_landmarks[0])
         draw_prediction_overlay(frame, smoothed if smoothed not in ("nothing",) else None, stable_count)

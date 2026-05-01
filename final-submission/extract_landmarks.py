@@ -1,13 +1,6 @@
-"""
-Extract MediaPipe hand landmarks from ASL dataset images and save as CSV.
-
-For each image:
-  - Run MediaPipe Hands to get 21 3D landmarks
-  - Normalize relative to wrist (landmark 0) and scale to [-1, 1]
-  - Save as a row: label, x0, y0, z0, ..., x20, y20, z20
-
-Images that MediaPipe can't detect a hand in are skipped.
-"""
+# Runs MediaPipe on ASL dataset images saves hand landmarks to a CSV
+# Each row is a label plus 21 wrist-normalized 3D landmarks 
+# Images with no detected hand are skipped
 
 import csv
 import os

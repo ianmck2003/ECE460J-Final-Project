@@ -1,22 +1,6 @@
-"""
-Train an MLP classifier on MediaPipe hand landmarks to recognize ASL fingerspelling.
-
-Input:  landmarks.csv  — rows of (label, x0..z20) — 63 base dims
-Output: model.pkl      — trained sklearn MLPClassifier, ready for inference.py
-
-Architecture: 68 → 256 → 128 → 64 → C classes
-  (63 wrist-centered landmarks + 5 index–middle geometry features for R/U/V separation)
-
-Training extras:
-  - Mirror augmentation (left/right)
-  - Light pose jitter (rotation + noise) with extra copies for R, U, V
-  - Higher sample_weight on R, U, V
-
-Deps / venv (Windows): install into THIS folder's env so pip and python match, e.g.:
-  .\\env\\Scripts\\python.exe -m pip install -r requirements.txt
-  .\\env\\Scripts\\python.exe .\\CV_model.py
-Or run .\\install-training-deps.ps1 then use the same python.exe for training.
-"""
+# Trains an MLP on MediaPipe hand landmarks to classify ASL fingerspelling
+# Reads landmarks.csv outputs model.pkl
+# has  mirror augmentation, pose jitter, and extra weight on R, U, V
 
 import pickle
 
@@ -42,14 +26,14 @@ ENCODER_OUT = "./label_encoder.pkl"
 TEST_SIZE = 0.15
 RANDOM_STATE = 42
 
-# R / U / V: easy to confuse; give more synthetic views and loss weight
+# R  U  V are easy to confuse so gave more synthetic views and loss weight
 RUV_LABELS = frozenset({"R", "U", "V"})
 RUV_EXTRA_AUG_PER_SAMPLE = 6
 RUV_SAMPLE_WEIGHT = 2.25
 POSE_NOISE_STD = 0.018
 POSE_MAX_ANGLE_RAD = 0.42
 
-# --- Load data ---
+# ================ Load data ================
 print("Loading landmarks.csv...")
 df = pd.read_csv(LANDMARKS_CSV)
 print(f"  {len(df)} rows, {df['label'].nunique()} classes: {sorted(df['label'].unique())}")
@@ -57,13 +41,13 @@ print(f"  {len(df)} rows, {df['label'].nunique()} classes: {sorted(df['label'].u
 X63 = df.drop(columns=["label"]).values.astype(np.float32)
 y = df["label"].values
 
-# --- Augment: mirror ---
+# ================ Augment: mirror ================
 X_mirrored = mirror_base_x(X63)
 X63 = np.vstack([X63, X_mirrored])
 y = np.concatenate([y, y], axis=0)
 print(f"  After mirroring: {len(X63)} samples")
 
-# --- Extra pose jitter for R, U, V ---
+# ================ Extra pose jitter for R, U, V ================
 rng = np.random.default_rng(RANDOM_STATE)
 ruv_mask = np.isin(y, list(RUV_LABELS))
 extra_X = []
@@ -83,7 +67,7 @@ if extra_X:
     y = np.concatenate([y, np.array(extra_y)], axis=0)
     print(f"  After R/U/V pose augmentation: {len(X63)} samples (+{len(extra_y)} synthetic)")
 
-# --- Global light jitter (all classes) for robustness ---
+# ================ Global light jitter (all classes) for robustness ================
 n_jitter = min(12_000, len(X63) // 4)
 if n_jitter > 0:
     idx = rng.choice(len(X63), size=n_jitter, replace=False)
@@ -95,16 +79,16 @@ if n_jitter > 0:
     y = np.concatenate([y, y[idx]], axis=0)
     print(f"  After global light jitter: {len(X63)} samples")
 
-# --- Expand 63 → 68 ---
+# ================ Expand 63 → 68 ================
 X = expand_feature_matrix(X63)
 print(f"  Feature shape: {X.shape[1]} (= {FEATURE_DIM})")
 
-# --- Encode labels ---
+# ================ Encode labels ================
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 print(f"  Label mapping: {dict(zip(le.classes_, le.transform(le.classes_)))}")
 
-# --- Train/val split ---
+# ================ Train/val split ================
 X_train, X_val, y_train, y_val = train_test_split(
     X, y_encoded, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y_encoded
 )
@@ -118,7 +102,7 @@ sample_weight = np.ones(len(y_train), dtype=np.float64)
 for j in ruv_class_idx:
     sample_weight[y_train == j] = RUV_SAMPLE_WEIGHT
 
-# --- Train MLP ---
+# ================ Train MLP ================
 print("\nTraining MLP...")
 model = MLPClassifier(
     hidden_layer_sizes=(256, 128, 64),
@@ -134,7 +118,7 @@ model = MLPClassifier(
 )
 model.fit(X_train, y_train, sample_weight=sample_weight)
 
-# --- Evaluate ---
+# ================ Evaluate ================
 y_pred = model.predict(X_val)
 acc = accuracy_score(y_val, y_pred)
 print(f"\nValidation accuracy: {acc:.4f} ({acc*100:.2f}%)")
@@ -157,7 +141,7 @@ if ruv_names:
             )
         )
 
-# --- Confusion matrix ---
+# ================ Confusion matrix ================
 cm = confusion_matrix(y_val, y_pred)
 plt.figure(figsize=(14, 12))
 sns.heatmap(
@@ -175,7 +159,7 @@ plt.tight_layout()
 plt.savefig("confusion_matrix.png", dpi=150)
 print("\nConfusion matrix saved to confusion_matrix.png")
 
-# --- Save ---
+# ================ Save ================
 with open(MODEL_OUT, "wb") as f:
     pickle.dump(model, f)
 with open(ENCODER_OUT, "wb") as f:

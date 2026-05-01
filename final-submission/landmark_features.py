@@ -1,9 +1,5 @@
-"""
-Wrist-centered MediaPipe hand features + extras that help separate similar letters.
-
-R / U / V differ mainly by index–middle geometry (crossed vs parallel vs spread).
-Base: 63 dims (same as landmarks.csv). Model input: base + 5 scalar geometry terms = 68.
-"""
+# Wrist-centered hand landmark features plus extra geometry terms to help tell R, U, and V apart.
+# Base features are 63 dims, model input is 68 (63 + 5 geometry extras).
 
 from __future__ import annotations
 
@@ -15,7 +11,7 @@ FEATURE_DIM = N_BASE + N_AUX
 
 
 def base_vector_from_mediapipe(lm) -> list[float]:
-    """Normalize like extract_landmarks / original inference (wrist-centered, max scale)."""
+    # Wrist-centered normalization, scaled to max absolute value.
     wrist_x, wrist_y, wrist_z = lm[0].x, lm[0].y, lm[0].z
     coords = []
     for point in lm:
@@ -38,7 +34,7 @@ def max_normalize_points(P: np.ndarray) -> np.ndarray:
 
 
 def mirror_base_x(base63) -> np.ndarray:
-    """Mirror across YZ plane (swap left/right hand) — negate all x components."""
+    # Flips the hand left/right by negating all x components.
     x = np.asarray(base63, dtype=np.float32).copy()
     if x.ndim == 1:
         x[0::3] *= -1.0
@@ -54,7 +50,7 @@ def random_pose_augment(
     noise_std: float = 0.018,
     max_angle_rad: float = 0.38,
 ) -> np.ndarray:
-    """Small in-plane rotation + noise, then re-max-normalize (matches pipeline)."""
+    # Applies a small random rotation and noise, then re-normalizes.
     P = _as_points(base63).copy()
     theta = float(rng.uniform(-max_angle_rad, max_angle_rad))
     c, s = np.cos(theta), np.sin(theta)
@@ -68,11 +64,7 @@ def random_pose_augment(
 
 
 def expand_features(base63) -> np.ndarray:
-    """
-    Append geometry between index (5–8) and middle (9–12) fingers.
-    U: fingers parallel → high cos (MCP→tip). V: spread → lower cos, larger tip distance.
-    R: crossed → different tip distance / 2D cross sign vs V.
-    """
+    # Appends 5 geometry features between the index and middle fingers to help separate R, U, and V.
     P = _as_points(base63)
     p5, p7, p8 = P[5], P[7], P[8]
     p9, p11, p12 = P[9], P[11], P[12]
